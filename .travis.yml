@@ -11,5 +11,5 @@ script:
 deploy:
   provider: surge
   project: ./build/
-  domain: kids-math-quiz.surge.sgh
+  domain: kids-math-quiz.surge.sh
   skip_cleanup: true
