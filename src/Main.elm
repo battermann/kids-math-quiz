@@ -9,7 +9,6 @@ import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Html exposing (Html)
 import Html.Attributes
-import Maybe.Extra
 import Random
 import Random.List
 
@@ -31,9 +30,9 @@ type Answer
 type alias Model =
     { upper : Int
     , operation : Operation
-    , numbers : Maybe ( Int, Int )
+    , numbers : ( Int, Int )
     , rndSolutions : List Int
-    , correctSolution : Maybe Int
+    , correctSolution : Int
     , result : Answer
     }
 
@@ -42,10 +41,10 @@ init : ( Model, Cmd Msg )
 init =
     ( { upper = 20
       , operation = Add
-      , numbers = Nothing
-      , rndSolutions = []
+      , numbers = ( 1, 1 )
+      , rndSolutions = [ 1, 2, 3, 5 ]
       , result = NotAnswered
-      , correctSolution = Nothing
+      , correctSolution = 2
       }
     , generateQuestion Add 20
     )
@@ -98,9 +97,9 @@ update msg model =
     case msg of
         QuestionResult ( nums, solution, solutions ) ->
             ( { model
-                | numbers = Just nums
+                | numbers = nums
                 , rndSolutions = solutions
-                , correctSolution = Just solution
+                , correctSolution = solution
                 , result = NotAnswered
               }
             , Cmd.none
@@ -112,7 +111,7 @@ update msg model =
         TrySolve n ->
             case model.operation of
                 Add ->
-                    if model.correctSolution |> Maybe.Extra.toList |> List.member n then
+                    if n == model.correctSolution then
                         ( { model | result = Correct n }, Cmd.none )
 
                     else
@@ -168,7 +167,7 @@ view model =
                     [ Html.Attributes.style "text-align" "center"
                     , Html.Attributes.style "font-size" "10vw"
                     ]
-                    [ model.numbers |> Maybe.map (viewTerm model.result model.operation) |> Maybe.withDefault (Html.text "") ]
+                    [ model.numbers |> viewTerm model.result model.operation ]
                 , Html.div
                     [ Html.Attributes.style "font-size" "5vw"
                     , Flex.block
