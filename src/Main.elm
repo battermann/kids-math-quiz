@@ -176,8 +176,12 @@ view model =
                     , Flex.justifyAround
                     ]
                     (viewSolutions model.rndSolutions)
-                , Html.div [ Size.w100, Flex.block, Flex.row, Flex.justifyAround, Spacing.mt3 ]
-                    [ Button.button [ Button.outlinePrimary, Button.onClick Next ] [ Html.text "Next" ] ]
+                , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt3 ]
+                    [ Button.button [ Button.outlinePrimary, Button.onClick Next ] [ Html.text "Next" ]
+                    , Button.linkButton
+                        [ Button.roleLink, Button.attrs [ Spacing.mt3, Html.Attributes.href "https://github.com/battermann/kids-math-quiz" ] ]
+                        [ Html.i [ Html.Attributes.class "fab fa-github" ] [], Html.text " Source Code" ]
+                    ]
                 ]
             ]
         ]
