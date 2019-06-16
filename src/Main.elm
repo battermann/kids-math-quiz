@@ -25,14 +25,14 @@ type Operation
 type Answer
     = Correct Int
     | Incorrect Int
-    | None
+    | NotAnswered
 
 
 type alias Model =
     { upper : Int
     , operation : Operation
     , numbers : Maybe ( Int, Int )
-    , solutions : List Int
+    , rndSolutions : List Int
     , correctSolution : Maybe Int
     , result : Answer
     }
@@ -40,7 +40,15 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { upper = 20, operation = Add, numbers = Nothing, solutions = [], result = None, correctSolution = Nothing }, generateQuestion Add 20 )
+    ( { upper = 20
+      , operation = Add
+      , numbers = Nothing
+      , rndSolutions = []
+      , result = NotAnswered
+      , correctSolution = Nothing
+      }
+    , generateQuestion Add 20
+    )
 
 
 
@@ -50,7 +58,10 @@ init =
 generateQuestion : Operation -> Int -> Cmd Msg
 generateQuestion operation upper =
     rndNumbers operation upper
-        |> Random.andThen (\( nums, solution ) -> solutions operation nums |> Random.map (\xs -> ( nums, solution, xs )))
+        |> Random.andThen
+            (\( nums, solution ) ->
+                rndSolutions operation upper nums |> Random.map (\xs -> ( nums, solution, xs ))
+            )
         |> Random.generate QuestionResult
 
 
@@ -66,11 +77,11 @@ rndNumbers operation upper =
                     )
 
 
-solutions : Operation -> ( Int, Int ) -> Random.Generator (List Int)
-solutions operation ( x, y ) =
+rndSolutions : Operation -> Int -> ( Int, Int ) -> Random.Generator (List Int)
+rndSolutions operation upper ( x, y ) =
     case operation of
         Add ->
-            Random.int 0 20
+            Random.int 0 upper
                 |> Random.list 3
                 |> Random.map (List.append [ x + y ])
                 |> Random.andThen Random.List.shuffle
@@ -85,8 +96,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        QuestionResult ( nums, solution, xs ) ->
-            ( { model | numbers = Just nums, solutions = xs, correctSolution = Just solution, result = None }, Cmd.none )
+        QuestionResult ( nums, solution, solutions ) ->
+            ( { model
+                | numbers = Just nums
+                , rndSolutions = solutions
+                , correctSolution = Just solution
+                , result = NotAnswered
+              }
+            , Cmd.none
+            )
 
         Next ->
             ( model, generateQuestion model.operation model.upper )
@@ -119,26 +137,25 @@ viewTerm answer operation ( x, y ) =
                     " " ++ String.fromInt n ++ " " ++ String.fromChar '😄'
 
                 Incorrect n ->
-                    " " ++ String.fromInt n ++ " " ++ String.fromChar'🙈'
+                    " " ++ String.fromInt n ++ " " ++ String.fromChar '🙈'
 
-                None ->
+                NotAnswered ->
                     " _"
     in
     Html.text (String.fromInt x ++ operator ++ String.fromInt y ++ " =" ++ result)
 
 
 viewSolutions : List Int -> List (Html Msg)
-viewSolutions xs =
-    xs
-        |> List.map
-            (\x ->
-                Button.button
-                    [ Button.light
-                    , Button.attrs [ Html.Attributes.style "font-size" "5vw" ]
-                    , Button.onClick (TrySolve x)
-                    ]
-                    [ Html.text (String.fromInt x) ]
-            )
+viewSolutions =
+    List.map
+        (\x ->
+            Button.button
+                [ Button.light
+                , Button.attrs [ Html.Attributes.style "font-size" "5vw" ]
+                , Button.onClick (TrySolve x)
+                ]
+                [ Html.text (String.fromInt x) ]
+        )
 
 
 view : Model -> Html Msg
@@ -158,7 +175,7 @@ view model =
                     , Flex.row
                     , Flex.justifyAround
                     ]
-                    (viewSolutions model.solutions)
+                    (viewSolutions model.rndSolutions)
                 , Html.div [ Size.w100, Flex.block, Flex.row, Flex.justifyAround, Spacing.mt3 ]
                     [ Button.button [ Button.outlinePrimary, Button.onClick Next ] [ Html.text "Next" ] ]
                 ]
