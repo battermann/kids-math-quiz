@@ -11,6 +11,7 @@
             "elm/html": "1.0.0",
             "elm/random": "1.0.0",
             "elm-community/random-extra": "3.1.0",
+            "mgold/elm-nonempty-list": "4.0.1",
             "rundis/elm-bootstrap": "5.1.0"
         },
         "indirect": {
