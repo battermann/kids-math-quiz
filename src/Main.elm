@@ -1,6 +1,7 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Bootstrap.Button as Button
+import Bootstrap.ButtonGroup as ButtonGroup
 import Bootstrap.CDN as CDN
 import Bootstrap.Grid as Grid
 import Bootstrap.Utilities.Flex as Flex
@@ -41,7 +42,7 @@ type alias Model =
     { upper : Int
     , operations : Nonempty Operation
     , term : Term
-    , rndChoices : List Int
+    , choices : List Int
     , answer : Answer
     }
 
@@ -51,7 +52,7 @@ init =
     ( { upper = 20
       , operations = Nel.cons Subtraction (Nel.fromElement Addition)
       , term = { operation = Subtraction, first = 1, second = 1, result = 2 }
-      , rndChoices = [ 1, 2, 3, 4, 5 ]
+      , choices = [ 1, 2, 3, 4, 5 ]
       , answer = NotAnswered
       }
     , generateQuestion (Nel.fromElement Subtraction) 20
@@ -122,7 +123,7 @@ type Msg
     = QuestionResult ( Term, List Int )
     | Next
     | TrySolve Int
-    | SelectOperation Operation
+    | ToggleOperation Operation
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -131,7 +132,7 @@ update msg model =
         QuestionResult ( term, choices ) ->
             ( { model
                 | term = term
-                , rndChoices = choices
+                , choices = choices
                 , answer = NotAnswered
               }
             , Cmd.none
@@ -147,8 +148,16 @@ update msg model =
             else
                 ( { model | answer = Incorrect n }, Cmd.none )
 
-        SelectOperation _ ->
-            ( model, Cmd.none )
+        ToggleOperation op ->
+            let
+                newModel =
+                    if model.operations |> Nel.member op then
+                        { model | operations = Nel.filter ((==) op >> not) (Nel.head model.operations) model.operations }
+
+                    else
+                        { model | operations = Nel.cons op model.operations }
+            in
+            ( newModel, generateQuestion newModel.operations model.upper )
 
 
 
@@ -196,6 +205,32 @@ viewChoices =
         )
 
 
+viewCheckbox : Model -> Html Msg
+viewCheckbox model =
+    ButtonGroup.checkboxButtonGroup []
+        [ ButtonGroup.checkboxButton
+            (model.operations |> Nel.member Addition)
+            [ Button.light
+            , Button.onClick (ToggleOperation Addition)
+            , Button.attrs
+                [ Html.Attributes.style "font-size" "5vw"
+                , Html.Attributes.style "min-width" "10vw"
+                ]
+            ]
+            [ Html.i [ Html.Attributes.class "fas fa-plus" ] [] ]
+        , ButtonGroup.checkboxButton
+            (model.operations |> Nel.member Subtraction)
+            [ Button.light
+            , Button.onClick (ToggleOperation Subtraction)
+            , Button.attrs
+                [ Html.Attributes.style "font-size" "5vw"
+                , Html.Attributes.style "min-width" "10vw"
+                ]
+            ]
+            [ Html.i [ Html.Attributes.class "fas fa-minus" ] [] ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     Grid.container []
@@ -212,20 +247,22 @@ view model =
                     [ Html.Attributes.style "font-size" "5vw"
                     , Flex.block
                     , Flex.row
-                    , Flex.justifyAround
+                    , Flex.justifyBetween
                     ]
-                    (viewChoices model.rndChoices)
-                , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt3 ]
-                    [ Button.button
-                        [ Button.light
-                        , Button.onClick Next
-                        , Button.attrs
-                            [ Spacing.mt3
-                            , Html.Attributes.style "font-size" "5vw"
-                            , Html.Attributes.style "min-width" "10vw"
+                    (viewChoices model.choices)
+                , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt4 ]
+                    [ Html.div [ Flex.block, Flex.row, Flex.justifyBetween, Size.w100 ]
+                        [ viewCheckbox model
+                        , Button.button
+                            [ Button.light
+                            , Button.onClick Next
+                            , Button.attrs
+                                [ Html.Attributes.style "font-size" "5vw"
+                                , Html.Attributes.style "min-width" "10vw"
+                                ]
                             ]
+                            [ Html.i [ Html.Attributes.class "fas fa-step-forward" ] [] ]
                         ]
-                        [ Html.i [ Html.Attributes.class "fas fa-step-forward" ] [] ]
                     , Button.linkButton
                         [ Button.roleLink, Button.attrs [ Spacing.mt3, Html.Attributes.href "https://github.com/battermann/kids-math-quiz" ] ]
                         [ Html.i [ Html.Attributes.class "fab fa-github" ] [], Html.text " Source Code" ]
