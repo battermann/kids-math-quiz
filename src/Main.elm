@@ -22,6 +22,7 @@ import Random.List
 type Operation
     = Addition
     | Subtraction
+    | Multiplication
 
 
 type Answer
@@ -32,8 +33,8 @@ type Answer
 
 type alias Term =
     { operation : Operation
-    , first : Int
-    , second : Int
+    , operandOne : Int
+    , operandTwo : Int
     , result : Int
     }
 
@@ -49,13 +50,20 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { upper = 20
-      , operations = Nel.cons Subtraction (Nel.fromElement Addition)
-      , term = { operation = Subtraction, first = 1, second = 1, result = 2 }
+    let
+        upper =
+            20
+
+        operations =
+            Nel.fromElement Addition
+    in
+    ( { upper = upper
+      , operations = operations
+      , term = { operation = Addition, operandOne = 1, operandTwo = 1, result = 2 }
       , choices = [ 1, 2, 3, 4, 5 ]
       , answer = NotAnswered
       }
-    , generateQuestion (Nel.fromElement Subtraction) 20
+    , generateQuestion operations upper
     )
 
 
@@ -82,14 +90,14 @@ rndTerm operations upper =
                     Subtraction ->
                         Random.int 0 upper
                             |> Random.andThen
-                                (\first ->
-                                    Random.int 0 first
+                                (\operandOne ->
+                                    Random.int 0 operandOne
                                         |> Random.map
-                                            (\second ->
+                                            (\operandTwo ->
                                                 { operation = operation
-                                                , first = first
-                                                , second = second
-                                                , result = first - second
+                                                , operandOne = operandOne
+                                                , operandTwo = operandTwo
+                                                , result = operandOne - operandTwo
                                                 }
                                             )
                                 )
@@ -97,14 +105,29 @@ rndTerm operations upper =
                     Addition ->
                         Random.int 0 upper
                             |> Random.andThen
-                                (\first ->
-                                    Random.int 0 (upper - first)
+                                (\operandOne ->
+                                    Random.int 0 (upper - operandOne)
                                         |> Random.map
-                                            (\second ->
+                                            (\operandTwo ->
                                                 { operation = operation
-                                                , first = first
-                                                , second = second
-                                                , result = first + second
+                                                , operandOne = operandOne
+                                                , operandTwo = operandTwo
+                                                , result = operandOne + operandTwo
+                                                }
+                                            )
+                                )
+
+                    Multiplication ->
+                        Random.int 0 upper
+                            |> Random.andThen
+                                (\operandOne ->
+                                    Random.int 0 (upper // operandOne)
+                                        |> Random.map
+                                            (\operandTwo ->
+                                                { operation = operation
+                                                , operandOne = operandOne
+                                                , operandTwo = operandTwo
+                                                , result = operandOne * operandTwo
                                                 }
                                             )
                                 )
@@ -165,7 +188,7 @@ update msg model =
 
 
 viewTerm : Answer -> Term -> Html Msg
-viewTerm answer { operation, first, second } =
+viewTerm answer { operation, operandOne, operandTwo } =
     let
         operator =
             case operation of
@@ -174,6 +197,9 @@ viewTerm answer { operation, first, second } =
 
                 Addition ->
                     " + "
+
+                Multiplication ->
+                    " × "
 
         result =
             case answer of
@@ -186,7 +212,7 @@ viewTerm answer { operation, first, second } =
                 NotAnswered ->
                     " _"
     in
-    Html.text (String.fromInt first ++ operator ++ String.fromInt second ++ " =" ++ result)
+    Html.text (String.fromInt operandOne ++ operator ++ String.fromInt operandTwo ++ " =" ++ result)
 
 
 viewChoices : List Int -> List (Html Msg)
@@ -207,27 +233,33 @@ viewChoices =
 
 viewCheckbox : Model -> Html Msg
 viewCheckbox model =
+    let
+        style =
+            [ Html.Attributes.style "font-size" "5vw"
+            ]
+    in
     ButtonGroup.checkboxButtonGroup []
         [ ButtonGroup.checkboxButton
             (model.operations |> Nel.member Addition)
             [ Button.light
             , Button.onClick (ToggleOperation Addition)
-            , Button.attrs
-                [ Html.Attributes.style "font-size" "5vw"
-                , Html.Attributes.style "min-width" "10vw"
-                ]
+            , Button.attrs style
             ]
             [ Html.i [ Html.Attributes.class "fas fa-plus" ] [] ]
         , ButtonGroup.checkboxButton
             (model.operations |> Nel.member Subtraction)
             [ Button.light
             , Button.onClick (ToggleOperation Subtraction)
-            , Button.attrs
-                [ Html.Attributes.style "font-size" "5vw"
-                , Html.Attributes.style "min-width" "10vw"
-                ]
+            , Button.attrs style
             ]
             [ Html.i [ Html.Attributes.class "fas fa-minus" ] [] ]
+        , ButtonGroup.checkboxButton
+            (model.operations |> Nel.member Multiplication)
+            [ Button.light
+            , Button.onClick (ToggleOperation Multiplication)
+            , Button.attrs style
+            ]
+            [ Html.i [ Html.Attributes.class "fas fa-times" ] [] ]
         ]
 
 
