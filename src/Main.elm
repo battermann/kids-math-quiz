@@ -39,12 +39,28 @@ type alias Term =
     }
 
 
+type View
+    = Settings
+    | Main
+
+
+toggleView : View -> View
+toggleView v =
+    case v of
+        Settings ->
+            Main
+
+        Main ->
+            Settings
+
+
 type alias Model =
     { upper : Int
     , operations : Nonempty Operation
     , term : Term
     , choices : List Int
     , answer : Answer
+    , view : View
     }
 
 
@@ -62,6 +78,7 @@ init =
       , term = { operation = Addition, operandOne = 1, operandTwo = 1, result = 2 }
       , choices = [ 1, 2, 3, 4, 5 ]
       , answer = NotAnswered
+      , view = Main
       }
     , generateQuestion operations upper
     )
@@ -118,7 +135,7 @@ rndTerm operations upper =
                                 )
 
                     Multiplication ->
-                        Random.int 0 upper
+                        Random.int 0 (sqrt (toFloat upper) |> round)
                             |> Random.andThen
                                 (\operandOne ->
                                     Random.int 0 (upper // operandOne)
@@ -147,6 +164,8 @@ type Msg
     | Next
     | TrySolve Int
     | ToggleOperation Operation
+    | ToggleView
+    | SetLimit Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -181,6 +200,12 @@ update msg model =
                         { model | operations = Nel.cons op model.operations }
             in
             ( newModel, generateQuestion newModel.operations model.upper )
+
+        ToggleView ->
+            ( { model | view = toggleView model.view }, Cmd.none )
+
+        SetLimit limit ->
+            ( { model | upper = limit }, generateQuestion model.operations limit )
 
 
 
@@ -228,13 +253,39 @@ viewChoices buttonStyle =
         )
 
 
-viewCheckbox : Model -> Html Msg
-viewCheckbox model =
-    let
-        style =
-            [ Html.Attributes.style "font-size" "5vw"
+viewSettings : Model -> Html Msg
+viewSettings model =
+    Html.div [ Flex.block, Flex.col, Flex.alignItemsStart ]
+        [ Html.h2 [ Spacing.mt3 ] [ Html.text "Operations" ]
+        , Html.div [ Spacing.mt3 ] [ viewOperationCheckboxes [ Html.Attributes.style "font-size" "2vw" ] model ]
+        , Html.h2 [ Spacing.mt3 ] [ Html.text "Upper Limit" ]
+        , Html.div [ Spacing.mt3 ] [ viewUpperLimitRadios [ Html.Attributes.style "font-size" "2vw" ] model ]
+        , Button.button
+            [ Button.onClick ToggleView
+            , Button.attrs [ Html.Attributes.style "font-size" "2vw", Spacing.mt3 ]
             ]
-    in
+            [ Html.i [ Html.Attributes.class "fas fa-arrow-left" ] [] ]
+        ]
+
+
+viewUpperLimitRadios : List (Html.Attribute Msg) -> Model -> Html Msg
+viewUpperLimitRadios style model =
+    [ 10, 20, 30, 40, 50, 100, 500, 1000 ]
+        |> List.map
+            (\limit ->
+                ButtonGroup.radioButton
+                    (model.upper == limit)
+                    [ Button.light
+                    , Button.attrs style
+                    , Button.onClick (SetLimit limit)
+                    ]
+                    [ Html.text (String.fromInt limit) ]
+            )
+        |> ButtonGroup.radioButtonGroup []
+
+
+viewOperationCheckboxes : List (Html.Attribute Msg) -> Model -> Html Msg
+viewOperationCheckboxes style model =
     ButtonGroup.checkboxButtonGroup []
         [ ButtonGroup.checkboxButton
             (model.operations |> Nel.member Addition)
@@ -260,47 +311,63 @@ viewCheckbox model =
         ]
 
 
-view : Model -> Html Msg
-view model =
+viewMain : Model -> Html Msg
+viewMain model =
     let
         buttonStyle =
-            [ Html.Attributes.style "font-size" "5vw"
-            , Html.Attributes.style "width" "10vw"
-            , Html.Attributes.style "max-width" "170px"
-            , Html.Attributes.style "min-width" "45px"
+            [ Html.Attributes.style "font-size" "4vw"
+            , Html.Attributes.style "min-width" "10vw"
+            , Html.Attributes.style "max-width" "190px"
             ]
     in
+    Html.div []
+        [ Html.div
+            [ Html.Attributes.style "text-align" "center"
+            , Html.Attributes.class "term"
+            , Html.Attributes.style "font-size" "7vw"
+            , Spacing.mt4
+            ]
+            [ viewTerm model.answer model.term ]
+        , Html.div
+            [ Flex.block
+            , Flex.row
+            , Flex.justifyBetween
+            , Spacing.mt4
+            ]
+            (viewChoices buttonStyle model.choices)
+        , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt4 ]
+            [ Html.div [ Flex.block, Flex.row, Flex.justifyBetween, Size.w100 ]
+                [ Button.button
+                    [ Button.onClick ToggleView
+                    , Button.attrs buttonStyle
+                    ]
+                    [ Html.i [ Html.Attributes.class "fas fa-cog" ] [] ]
+                , Button.button
+                    [ Button.light
+                    , Button.onClick Next
+                    , Button.attrs buttonStyle
+                    ]
+                    [ Html.i [ Html.Attributes.class "fas fa-step-forward" ] [] ]
+                ]
+            , Button.linkButton
+                [ Button.roleLink, Button.attrs [ Spacing.mt3, Html.Attributes.href "https://github.com/battermann/kids-math-quiz" ] ]
+                [ Html.i [ Html.Attributes.class "fab fa-github" ] [], Html.text " Source Code" ]
+            ]
+        ]
+
+
+view : Model -> Html Msg
+view model =
     Grid.container []
         [ CDN.stylesheet -- creates an inline style node with the Bootstrap CSS
         , Grid.row []
             [ Grid.col []
-                [ Html.div
-                    [ Html.Attributes.style "text-align" "center"
-                    , Html.Attributes.class "term"
-                    , Html.Attributes.style "font-size" "10vw"
-                    , Spacing.mt4
-                    ]
-                    [ viewTerm model.answer model.term ]
-                , Html.div
-                    [ Flex.block
-                    , Flex.row
-                    , Flex.justifyBetween
-                    ]
-                    (viewChoices buttonStyle model.choices)
-                , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt4 ]
-                    [ Html.div [ Flex.block, Flex.row, Flex.justifyBetween, Size.w100 ]
-                        [ viewCheckbox model
-                        , Button.button
-                            [ Button.light
-                            , Button.onClick Next
-                            , Button.attrs buttonStyle
-                            ]
-                            [ Html.i [ Html.Attributes.class "fas fa-step-forward" ] [] ]
-                        ]
-                    , Button.linkButton
-                        [ Button.roleLink, Button.attrs [ Spacing.mt3, Html.Attributes.href "https://github.com/battermann/kids-math-quiz" ] ]
-                        [ Html.i [ Html.Attributes.class "fab fa-github" ] [], Html.text " Source Code" ]
-                    ]
+                [ case model.view of
+                    Settings ->
+                        viewSettings model
+
+                    Main ->
+                        viewMain model
                 ]
             ]
         ]
