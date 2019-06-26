@@ -215,16 +215,13 @@ viewTerm answer { operation, operandOne, operandTwo } =
     Html.text (String.fromInt operandOne ++ operator ++ String.fromInt operandTwo ++ " =" ++ result)
 
 
-viewChoices : List Int -> List (Html Msg)
-viewChoices =
+viewChoices : List (Html.Attribute Msg) -> List Int -> List (Html Msg)
+viewChoices buttonStyle =
     List.map
         (\x ->
             Button.button
                 [ Button.dark
-                , Button.attrs
-                    [ Html.Attributes.style "font-size" "5vw"
-                    , Html.Attributes.style "min-width" "10vw"
-                    ]
+                , Button.attrs buttonStyle
                 , Button.onClick (TrySolve x)
                 ]
                 [ Html.text (String.fromInt x) ]
@@ -265,33 +262,38 @@ viewCheckbox model =
 
 view : Model -> Html Msg
 view model =
+    let
+        buttonStyle =
+            [ Html.Attributes.style "font-size" "5vw"
+            , Html.Attributes.style "width" "10vw"
+            , Html.Attributes.style "max-width" "170px"
+            , Html.Attributes.style "min-width" "45px"
+            ]
+    in
     Grid.container []
         [ CDN.stylesheet -- creates an inline style node with the Bootstrap CSS
         , Grid.row []
             [ Grid.col []
                 [ Html.div
                     [ Html.Attributes.style "text-align" "center"
+                    , Html.Attributes.class "term"
                     , Html.Attributes.style "font-size" "10vw"
                     , Spacing.mt4
                     ]
                     [ viewTerm model.answer model.term ]
                 , Html.div
-                    [ Html.Attributes.style "font-size" "5vw"
-                    , Flex.block
+                    [ Flex.block
                     , Flex.row
                     , Flex.justifyBetween
                     ]
-                    (viewChoices model.choices)
+                    (viewChoices buttonStyle model.choices)
                 , Html.div [ Size.w100, Flex.block, Flex.col, Flex.alignItemsCenter, Spacing.mt4 ]
                     [ Html.div [ Flex.block, Flex.row, Flex.justifyBetween, Size.w100 ]
                         [ viewCheckbox model
                         , Button.button
                             [ Button.light
                             , Button.onClick Next
-                            , Button.attrs
-                                [ Html.Attributes.style "font-size" "5vw"
-                                , Html.Attributes.style "min-width" "10vw"
-                                ]
+                            , Button.attrs buttonStyle
                             ]
                             [ Html.i [ Html.Attributes.class "fas fa-step-forward" ] [] ]
                         ]
