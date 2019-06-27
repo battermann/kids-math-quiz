@@ -120,7 +120,7 @@ rndTerm operations upper =
                                 )
 
                     Addition ->
-                        Random.int 0 upper
+                        Random.int 0 (upper // 2)
                             |> Random.andThen
                                 (\operandOne ->
                                     Random.int 0 (upper - operandOne)
@@ -153,10 +153,10 @@ rndTerm operations upper =
 
 rndChoices : Int -> Int -> Random.Generator (List Int)
 rndChoices upper correctAnswer =
-    Random.int 0 upper
-        |> Random.list 4
-        |> Random.map (List.append [ correctAnswer ])
-        |> Random.andThen Random.List.shuffle
+    List.range 0 upper
+        |> List.filter ((/=) correctAnswer)
+        |> Random.List.shuffle
+        |> Random.andThen (\xs -> correctAnswer :: List.take 4 xs |> Random.List.shuffle)
 
 
 type Msg
@@ -318,6 +318,7 @@ viewMain model =
             [ Html.Attributes.style "font-size" "4vw"
             , Html.Attributes.style "min-width" "10vw"
             , Html.Attributes.style "max-width" "190px"
+            , Html.Attributes.style "user-select" "none"
             ]
     in
     Html.div []
@@ -325,6 +326,7 @@ viewMain model =
             [ Html.Attributes.style "text-align" "center"
             , Html.Attributes.class "term"
             , Html.Attributes.style "font-size" "7vw"
+            , Html.Attributes.style "user-select" "none"
             , Spacing.mt4
             ]
             [ viewTerm model.answer model.term ]
